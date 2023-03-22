@@ -79,13 +79,40 @@ def main():
         print("Please run this script with administrative privileges.")
         sys.exit(1)
 
-    domain_name = input("Enter your domain name (e.g., example.local): ").strip()
+    # Prompt user for domain name and validate input
+    while True:
+        domain_name = input("Enter your domain name (e.g., example.local): ").strip()
+        if not domain_name:
+            print("Domain name cannot be empty.")
+        elif not re.match(r"^([a-zA-Z0-9]+[.])+[a-zA-Z]{2,}$", domain_name):
+            print("Invalid domain name format.")
+        else:
+            break
+
+    # Set target OU
     domain_path = ",".join([f"DC={part}" for part in domain_name.split(".")])
     target_ou = ADContainer.from_dn(f"OU=Stress Test,{domain_path}")
 
-    number_of_users = int(input("Enter the number of users to create: ").strip())
-    password = getpass.getpass("Enter a password for the new users: ")
+    # Prompt user for number of users and validate input
+    while True:
+        try:
+            number_of_users = int(input("Enter the number of users to create: ").strip())
+            if number_of_users <= 0:
+                print("Number of users must be greater than 0.")
+            else:
+                break
+        except ValueError:
+            print("Invalid input. Please enter a valid integer.")
 
+    # Prompt user for password
+    while True:
+        password = getpass.getpass("Enter a password for the new users: ")
+        if len(password) < 8:
+            print("Password must be at least 8 characters.")
+        else:
+            break
+
+    # Get existing users
     search = ADSearch()
     search.set_filter(f"(&(objectCategory=person)(objectClass=user)(memberOf=CN=StressTestAdmins,OU=Stress Test,{domain_path}))")
     search.set_attributes(["sAMAccountName"])
