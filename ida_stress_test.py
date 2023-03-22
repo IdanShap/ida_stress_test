@@ -45,9 +45,6 @@ def create_users(number_of_users, domain_name, domain_path, password, highest_us
             stress_test_admins.add_members(user)
             remote_desktop_users = adgroup.ADGroup.from_cn("Remote Desktop Users")
             remote_desktop_users.add_members(user)
-            print(f"Username: {username}")
-            print(f"UPN: {user_principal_name}")
-            print(f"Password: {password}")
         except Exception as e:
             print(f"Error creating user {username}: {e}")
 
