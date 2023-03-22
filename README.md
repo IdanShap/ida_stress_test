@@ -12,7 +12,7 @@ This Python script is designed to stress test an Active Directory environment by
 
 To install the required libraries, run the following command:
 ```powershell
-python ad_stress_test.py
+pip install pyad pypsrp wmi
 ``` 
 
 ## Modifiable Variables
