@@ -11,9 +11,9 @@ This Python script is designed to stress test an Active Directory environment by
   - `wmi`
 
 To install the required libraries, run the following command:
-'''powershell
+```powershell
 python ad_stress_test.py
-'''
+``` 
 
 ## Modifiable Variables
 
@@ -36,9 +36,9 @@ There are no modifiable variables directly in the script. However, you can modif
 ## Usage
 
 Run the script in a terminal or command prompt with administrative privileges:
-'''powershell
+```powershell
 python ida_stress_test.py
-'''
+```
 
 Follow the prompts to enter your domain name, the number of users to create, and the password for the new users.
 
