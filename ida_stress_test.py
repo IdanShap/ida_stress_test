@@ -75,53 +75,85 @@ def generate_logon_events(domain_name, existing_users, password):
 
 
 def main():
-    if not is_admin():
-        print("Please run this script with administrative privileges.")
-        sys.exit(1)
-
-    # Prompt user for domain name and validate input
-    while True:
-        domain_name = input("Enter your domain name (e.g., example.local): ").strip()
-        if not domain_name:
-            print("Domain name cannot be empty.")
-        elif not re.match(r"^([a-zA-Z0-9]+[.])+[a-zA-Z]{2,}$", domain_name):
-            print("Invalid domain name format.")
-        else:
-            break
-
-    # Set target OU
-    domain_path = ",".join([f"DC={part}" for part in domain_name.split(".")])
-    target_ou = ADContainer.from_dn(f"OU=Stress Test,{domain_path}")
-
-    # Prompt user for number of users and validate input
-    while True:
+    # Define cleanup function to delete users and target OU
+    def cleanup():
+        print("\nPerforming cleanup...")
+        for i in range(highest_user_number, highest_user_number - number_of_users, -1):
+            username = f"user{i}"
+            try:
+                aduser.ADUser.from_cn(username).delete()
+                print(f"User {username} deleted.")
+            except Exception as e:
+                print(f"Error deleting user {username}: {e}")
         try:
-            number_of_users = int(input("Enter the number of users to create: ").strip())
-            if number_of_users <= 0:
-                print("Number of users must be greater than 0.")
+            target_ou.delete()
+            print(f"Target OU {target_ou.dn} deleted.")
+        except Exception as e:
+            print(f"Error deleting target OU {target_ou.dn}: {e}")
+
+    try:
+        if not is_admin():
+            print("Please run this script with administrative privileges.")
+            sys.exit(1)
+
+        # Prompt user for domain name and validate input
+        while True:
+            domain_name = input("Enter your domain name (e.g., example.local): ").strip()
+            if not domain_name:
+                print("Domain name cannot be empty.")
+            elif not re.match(r"^([a-zA-Z0-9]+[.])+[a-zA-Z]{2,}$", domain_name):
+                print("Invalid domain name format.")
             else:
                 break
-        except ValueError:
-            print("Invalid input. Please enter a valid integer.")
 
-    # Prompt user for password
-    while True:
-        password = getpass.getpass("Enter a password for the new users: ")
-        if len(password) < 8:
-            print("Password must be at least 8 characters.")
-        else:
-            break
+        # Set target OU
+        domain_path = ",".join([f"DC={part}" for part in domain_name.split(".")])
+        target_ou = ADContainer.from_dn(f"OU=Stress Test,{domain_path}")
 
-    # Get existing users
-    search = ADSearch()
-    search.set_filter(f"(&(objectCategory=person)(objectClass=user)(memberOf=CN=StressTestAdmins,OU=Stress Test,{domain_path}))")
-    search.set_attributes(["sAMAccountName"])
-    existing_users = [entry["attributes"]["sAMAccountName"] for entry in search.execute_query()]
+        # Prompt user for number of users and validate input
+        while True:
+            try:
+                number_of_users = int(input("Enter the number of users to create: ").strip())
+                if number_of_users <= 0:
+                    print("Number of users must be greater than 0.")
+                else:
+                    break
+            except ValueError:
+                print("Invalid input. Please enter a valid integer.")
 
-    highest_user_number = get_highest_user_number(existing_users)
+        # Prompt user for password
+        while True:
+            password = getpass.getpass("Enter a password for the new users: ")
+            if len(password) < 8:
+                print("Password must be at least 8 characters.")
+            else:
+                break
 
-    create_users(number_of_users, domain_name, domain_path, password, highest_user_number, target_ou)
-    generate_logon_events(domain_name, existing_users, password)
+        # Get existing users
+        search = ADSearch()
+        search.set_filter(f"(&(objectCategory=person)(objectClass=user)(memberOf=CN=StressTestAdmins,OU=Stress Test,{domain_path}))")
+        search.set_attributes(["sAMAccountName"])
+        existing_users = [entry["attributes"]["sAMAccountName"] for entry in search.execute_query()]
+
+        highest_user_number = get_highest_user_number(existing_users)
+
+        # Create new users and add them to AD groups
+        create_users(number_of_users, domain_name, domain_path, password, highest_user_number, target_ou)
+        generate_logon_events(domain_name, existing_users, password)
+
+    except KeyboardInterrupt:
+        print("\nKeyboardInterrupt detected. Performing cleanup...")
+        cleanup()
+        sys.exit(1)
+
+    except Exception as e:
+        print(f"Error: {e}")
+        print("Performing cleanup...")
+        cleanup()
+        sys.exit(1)
+
+    # Cleanup at the end of script execution
+    cleanup()
 
 
 if __name__ == "__main__":
